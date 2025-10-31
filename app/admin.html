@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <title>لوحة الإدارة</title>
+
+    <!-- Telegram SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+    <!-- Boxicons -->
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--tg-theme-bg-color, #fff);
+            color: var(--tg-theme-text-color, #000);
+            padding-bottom: 70px;
+        }
+
+        /* Loading */
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: var(--tg-theme-bg-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .loading.hide {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--tg-theme-hint-color);
+            border-top-color: var(--tg-theme-button-color);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px 16px;
+            color: white;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-100%); }
+            to { transform: translateY(0); }
+        }
+
+        .header-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .back-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        /* Stats Cards */
+        .stats-container {
+            padding: 16px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .stat-card {
+            background: var(--tg-theme-secondary-bg-color);
+            padding: 16px;
+            border-radius: 16px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .stat-card i {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .stat-card.users i { color: #3390ec; }
+        .stat-card.orders i { color: #34c759; }
+        .stat-card.products i { color: #ff9500; }
+        .stat-card.revenue i { color: #ff3b30; }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--tg-theme-hint-color);
+        }
+
+        /* Content */
+        .page {
+            display: none;
+            padding: 16px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        /* Section */
+        .section {
+            background: var(--tg-theme-secondary-bg-color);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title i {
+            color: var(--tg-theme-button-color);
+            font-size: 22px;
+        }
+
+        /* Form */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--tg-theme-hint-color);
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            background: var(--tg-theme-bg-color);
+            border: 1px solid var(--tg-theme-hint-color);
+            border-radius: 12px;
+            color: var(--tg-theme-text-color);
+            font-size: 15px;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--tg-theme-button-color);
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        /* Button */
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--tg-theme-button-color);
+            color: var(--tg-theme-button-text-color);
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: transform 0.2s;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn i {
+            font-size: 20px;
+        }
+
+        .btn.success {
+            background: #34c759;
+        }
+
+        .btn.danger {
+            background: #ff3b30;
+        }
+
+        /* Products List */
+        .products-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .product-item {
+            background: var(--tg-theme-bg-color);
+            padding: 16px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .product-item-info h4 {
+            font-size: 15px;
+            margin-bottom: 4px;
+        }
+
+        .product-item-info p {
+            font-size: 13px;
+            color: var(--tg-theme-hint-color);
+        }
+
+        .product-item-price {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--tg-theme-link-color);
+        }
+
+        /* Bottom Navigation */
+        .nav-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--tg-theme-secondary-bg-color);
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+            border-top: 1px solid var(--tg-theme-hint-color);
+            z-index: 100;
+        }
+
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 8px;
+            cursor: pointer;
+            color: var(--tg-theme-hint-color);
+            transition: all 0.2s;
+            border: none;
+            background: none;
+        }
+
+        .nav-item i {
+            font-size: 24px;
+        }
+
+        .nav-item span {
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .nav-item.active {
+            color: var(--tg-theme-button-color);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--tg-theme-hint-color);
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            opacity: 0.3;
+            margin-bottom: 12px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Success Message */
+        .success-msg {
+            background: rgba(52, 199, 89, 0.15);
+            color: #34c759;
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .success-msg.show {
+            display: flex;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading -->
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- App -->
+    <div id="app" class="hidden">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-top">
+                <button class="back-btn" onclick="goBack()">
+                    <i class='bx bx-arrow-back'></i>
+                </button>
+                <div></div>
+            </div>
+            <h1>⚙️ لوحة الإدارة</h1>
+            <p>إدارة كاملة للمتجر</p>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-container">
+            <div class="stat-card users">
+                <i class='bx bxs-group'></i>
+                <div class="stat-value" id="statUsers">0</div>
+                <div class="stat-label">المستخدمين</div>
+            </div>
+            <div class="stat-card orders">
+                <i class='bx bxs-cart'></i>
+                <div class="stat-value" id="statOrders">0</div>
+                <div class="stat-label">الطلبات</div>
+            </div>
+            <div class="stat-card products">
+                <i class='bx bxs-package'></i>
+                <div class="stat-value" id="statProducts">0</div>
+                <div class="stat-label">المنتجات</div>
+            </div>
+            <div class="stat-card revenue">
+                <i class='bx bxs-wallet'></i>
+                <div class="stat-value" id="statRevenue">0</div>
+                <div class="stat-label">الإيرادات</div>
+            </div>
+        </div>
+
+        <!-- Products Page -->
+        <div id="productsPage" class="page active">
+            <div id="successMsgProducts" class="success-msg">
+                <i class='bx bxs-check-circle'></i>
+                <span>تمت العملية بنجاح!</span>
+            </div>
+
+            <div class="section">
+                <div class="section-title">
+                    <i class='bx bxs-plus-circle'></i>
+                    إضافة منتج جديد
+                </div>
+
+                <div class="form-group">
+                    <label>اسم المنتج *</label>
+                    <input type="text" id="productName" placeholder="مثال: اشتراك نتفلكس">
+                </div>
+
+                <div class="form-group">
+                    <label>الوصف</label>
+                    <textarea id="productDesc" placeholder="وصف تفصيلي للمنتج..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>السعر (نقطة) *</label>
+                    <input type="number" id="productPrice" placeholder="100" min="1">
+                </div>
+
+                <div class="form-group">
+                    <label>الكمية (اتركه -1 لغير محدود)</label>
+                    <input type="number" id="productStock" value="-1">
+                </div>
+
+                <button class="btn" onclick="addProduct()">
+                    <i class='bx bx-plus'></i>
+                    إضافة المنتج
+                </button>
+            </div>
+
+            <div class="section">
+                <div class="section-title">
+                    <i class='bx bxs-file'></i>
+                    إضافة محتوى لمنتج
+                </div>
+
+                <div class="form-group">
+                    <label>اختر المنتج *</label>
+                    <select id="productSelect">
+                        <option value="">-- اختر منتج --</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>المحتوى (كل سطر محتوى منفصل) *</label>
+                    <textarea id="productContent" placeholder="CODE-ABC-123&#10;CODE-DEF-456&#10;CODE-GHI-789"></textarea>
+                </div>
+
+                <button class="btn success" onclick="addContent()">
+                    <i class='bx bx-check'></i>
+                    إضافة المحتوى
+                </button>
+            </div>
+
+            <div class="section">
+                <div class="section-title">
+                    <i class='bx bxs-package'></i>
+                    المنتجات الحالية
+                </div>
+                <div id="productsList" class="products-list"></div>
+                <div id="noProductsList" class="empty-state hidden">
+                    <i class='bx bx-package'></i>
+                    <p>لا توجد منتجات</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ads Page -->
+        <div id="adsPage" class="page">
+            <div id="successMsgAds" class="success-msg">
+                <i class='bx bxs-check-circle'></i>
+                <span>تمت العملية بنجاح!</span>
+            </div>
+
+            <div class="section">
+                <div class="section-title">
+                    <i class='bx bxs-plus-circle'></i>
+                    إضافة إعلان جديد
+                </div>
+
+                <div class="form-group">
+                    <label>نوع الإعلان *</label>
+                    <select id="adType">
+                        <option value="video">🎥 فيديو</option>
+                        <option value="link">🔗 رابط</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>عنوان الإعلان *</label>
+                    <input type="text" id="adTitle" placeholder="مثال: شاهد فيديو قصير">
+                </div>
+
+                <div class="form-group">
+                    <label>وصف الإعلان</label>
+                    <textarea id="adDesc" placeholder="وصف مختصر..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>رابط الإعلان *</label>
+                    <input type="url" id="adUrl" placeholder="https://...">
+                </div>
+
+                <div class="form-group">
+                    <label>النقاط المكتسبة *</label>
+                    <input type="number" id="adPoints" placeholder="10" min="1">
+                </div>
+
+                <button class="btn" onclick="addAd()">
+                    <i class='bx bx-plus'></i>
+                    إضافة الإعلان
+                </button>
+            </div>
+        </div>
+
+        <!-- Settings Page -->
+        <div id="settingsPage" class="page">
+            <div id="successMsgSettings" class="success-msg">
+                <i class='bx bxs-check-circle'></i>
+                <span>تم حفظ الإعدادات!</span>
+            </div>
+
+            <div class="section">
+                <div class="section-title">
+                    <i class='bx bxs-coin'></i>
+                    إعدادات النقاط
+                </div>
+
+                <div class="form-group">
+                    <label>نقاط إعلان الفيديو</label>
+                    <input type="number" id="settingVideoPoints" value="10" min="1">
+                </div>
+
+                <div class="form-group">
+                    <label>نقاط إعلان الرابط</label>
+                    <input type="number" id="settingLinkPoints" value="5" min="1">
+                </div>
+
+                <div class="form-group">
+                    <label>نقاط الدعوة</label>
+                    <input type="number" id="settingReferralPoints" value="20" min="1">
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">
+                    <i class='bx bxs-key'></i>
+                    إعدادات APIs
+                </div>
+
+                <div class="form-group">
+                    <label>CPAGrip API Key</label>
+                    <input type="text" id="settingCPAGripKey" placeholder="your-api-key">
+                </div>
+
+                <div class="form-group">
+                    <label>CPAGrip User ID</label>
+                    <input type="text" id="settingCPAGripUser" placeholder="your-user-id">
+                </div>
+
+                <div class="form-group">
+                    <label>Shorte.st API Key</label>
+                    <input type="text" id="settingShortestKey" placeholder="your-api-key">
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">
+                    <i class='bx bxs-message'></i>
+                    رسائل البوت
+                </div>
+
+                <div class="form-group">
+                    <label>رسالة الترحيب</label>
+                    <textarea id="settingWelcome" placeholder="مرحباً بك في المتجر..."></textarea>
+                </div>
+            </div>
+
+            <button class="btn" onclick="saveSettings()">
+                <i class='bx bx-save'></i>
+                حفظ الإعدادات
+            </button>
+        </div>
+
+        <!-- Bottom Navigation -->
+        <div class="nav-bar">
+            <button class="nav-item active" onclick="switchPage('products')">
+                <i class='bx bxs-package'></i>
+                <span>المنتجات</span>
+            </button>
+            <button class="nav-item" onclick="switchPage('ads')">
+                <i class='bx bxs-videos'></i>
+                <span>الإعلانات</span>
+            </button>
+            <button class="nav-item" onclick="switchPage('settings')">
+                <i class='bx bxs-cog'></i>
+                <span>الإعدادات</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+
+        const ADMIN_ID = 7732118455;
+        const API_URL = '../api/api.php';
+
+        let products = [];
+
+        // Initialize
+        async function init() {
+            try {
+                const user = tg.initDataUnsafe?.user;
+
+                // Check if admin
+                if (!user || user.id !== ADMIN_ID) {
+                    tg.showAlert('غير مصرح لك بالدخول');
+                    setTimeout(() => window.location.href = 'index.html', 2000);
+                    return;
+                }
+
+                await loadStats();
+                await loadProducts();
+                await loadSettings();
+
+                document.getElementById('loading').classList.add('hide');
+                document.getElementById('app').classList.remove('hidden');
+            } catch (error) {
+                console.error(error);
+                tg.showAlert('حدث خطأ: ' + error.message);
+            }
+        }
+
+        async function loadStats() {
+            const response = await fetch(`${API_URL}?action=get_stats`);
+            const data = await response.json();
+
+            if (data.success) {
+                document.getElementById('statUsers').textContent = data.stats.total_users;
+                document.getElementById('statOrders').textContent = data.stats.total_orders;
+                document.getElementById('statProducts').textContent = data.stats.active_products;
+                document.getElementById('statRevenue').textContent = data.stats.total_revenue;
+            }
+        }
+
+        async function loadProducts() {
+            const response = await fetch(`${API_URL}?action=get_products`);
+            const data = await response.json();
+
+            if (data.success) {
+                products = data.products;
+                renderProductsList(products);
+                updateProductSelect();
+            }
+        }
+
+        function renderProductsList(items) {
+            const container = document.getElementById('productsList');
+            const empty = document.getElementById('noProductsList');
+
+            if (!items || items.length === 0) {
+                container.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            empty.classList.add('hidden');
+            container.innerHTML = items.map(p => `
+                <div class="product-item">
+                    <div class="product-item-info">
+                        <h4>${p.name}</h4>
+                        <p>المبيعات: ${p.sales_count} | الكمية: ${p.stock_quantity == -1 ? '∞' : p.stock_quantity}</p>
+                    </div>
+                    <div class="product-item-price">
+                        💎 ${p.price}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateProductSelect() {
+            const select = document.getElementById('productSelect');
+            select.innerHTML = '<option value="">-- اختر منتج --</option>' +
+                products.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+        }
+
+        async function addProduct() {
+            const name = document.getElementById('productName').value.trim();
+            const desc = document.getElementById('productDesc').value.trim();
+            const price = document.getElementById('productPrice').value;
+            const stock = document.getElementById('productStock').value;
+
+            if (!name || !price) {
+                tg.showAlert('يرجى ملء الحقول المطلوبة');
+                return;
+            }
+
+            try {
+                tg.HapticFeedback?.impactOccurred('medium');
+
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'admin_add_product',
+                        admin_id: ADMIN_ID,
+                        name, description: desc, price, stock_quantity: stock
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    tg.HapticFeedback?.notificationOccurred('success');
+                    showSuccess('successMsgProducts');
+                    document.getElementById('productName').value = '';
+                    document.getElementById('productDesc').value = '';
+                    document.getElementById('productPrice').value = '';
+                    document.getElementById('productStock').value = '-1';
+                    await loadProducts();
+                    await loadStats();
+                } else {
+                    tg.showAlert('❌ ' + (data.error || 'فشلت الإضافة'));
+                }
+            } catch (error) {
+                tg.showAlert('حدث خطأ: ' + error.message);
+            }
+        }
+
+        async function addContent() {
+            const productId = document.getElementById('productSelect').value;
+            const content = document.getElementById('productContent').value.trim();
+
+            if (!productId || !content) {
+                tg.showAlert('يرجى ملء جميع الحقول');
+                return;
+            }
+
+            try {
+                tg.HapticFeedback?.impactOccurred('medium');
+
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'admin_add_product_content',
+                        admin_id: ADMIN_ID,
+                        product_id: productId,
+                        content
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    tg.HapticFeedback?.notificationOccurred('success');
+                    showSuccess('successMsgProducts');
+                    document.getElementById('productContent').value = '';
+                    tg.showAlert(`✅ تمت إضافة ${data.added} محتوى`);
+                } else {
+                    tg.showAlert('❌ ' + (data.error || 'فشلت الإضافة'));
+                }
+            } catch (error) {
+                tg.showAlert('حدث خطأ: ' + error.message);
+            }
+        }
+
+        async function addAd() {
+            const type = document.getElementById('adType').value;
+            const title = document.getElementById('adTitle').value.trim();
+            const desc = document.getElementById('adDesc').value.trim();
+            const url = document.getElementById('adUrl').value.trim();
+            const points = document.getElementById('adPoints').value;
+
+            if (!title || !url || !points) {
+                tg.showAlert('يرجى ملء الحقول المطلوبة');
+                return;
+            }
+
+            try {
+                tg.HapticFeedback?.impactOccurred('medium');
+
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'admin_add_ad',
+                        admin_id: ADMIN_ID,
+                        type, title, description: desc, url, points_reward: points
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    tg.HapticFeedback?.notificationOccurred('success');
+                    showSuccess('successMsgAds');
+                    document.getElementById('adTitle').value = '';
+                    document.getElementById('adDesc').value = '';
+                    document.getElementById('adUrl').value = '';
+                    document.getElementById('adPoints').value = '';
+                } else {
+                    tg.showAlert('❌ ' + (data.error || 'فشلت الإضافة'));
+                }
+            } catch (error) {
+                tg.showAlert('حدث خطأ: ' + error.message);
+            }
+        }
+
+        async function loadSettings() {
+            const response = await fetch(`${API_URL}?action=get_settings`);
+            const data = await response.json();
+
+            if (data.success) {
+                const s = data.settings;
+                document.getElementById('settingVideoPoints').value = s.points_per_video_ad || 10;
+                document.getElementById('settingLinkPoints').value = s.points_per_link_ad || 5;
+                document.getElementById('settingReferralPoints').value = s.points_per_referral || 20;
+                document.getElementById('settingCPAGripKey').value = s.cpagrip_api_key || '';
+                document.getElementById('settingCPAGripUser').value = s.cpagrip_user_id || '';
+                document.getElementById('settingShortestKey').value = s.shortest_api_key || '';
+                document.getElementById('settingWelcome').value = s.welcome_message || '';
+            }
+        }
+
+        async function saveSettings() {
+            try {
+                tg.HapticFeedback?.impactOccurred('medium');
+
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'update_settings',
+                        admin_id: ADMIN_ID,
+                        points_per_video_ad: document.getElementById('settingVideoPoints').value,
+                        points_per_link_ad: document.getElementById('settingLinkPoints').value,
+                        points_per_referral: document.getElementById('settingReferralPoints').value,
+                        cpagrip_api_key: document.getElementById('settingCPAGripKey').value,
+                        cpagrip_user_id: document.getElementById('settingCPAGripUser').value,
+                        shortest_api_key: document.getElementById('settingShortestKey').value,
+                        welcome_message: document.getElementById('settingWelcome').value
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    tg.HapticFeedback?.notificationOccurred('success');
+                    showSuccess('successMsgSettings');
+                } else {
+                    tg.showAlert('❌ فشل الحفظ');
+                }
+            } catch (error) {
+                tg.showAlert('حدث خطأ: ' + error.message);
+            }
+        }
+
+        function switchPage(page) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+            document.getElementById(page + 'Page').classList.add('active');
+            event.currentTarget.classList.add('active');
+
+            tg.HapticFeedback?.selectionChanged();
+        }
+
+        function showSuccess(id) {
+            const msg = document.getElementById(id);
+            msg.classList.add('show');
+            setTimeout(() => msg.classList.remove('show'), 3000);
+        }
+
+        function goBack() {
+            window.location.href = 'index.html';
+        }
+
+        init();
+    </script>
+</body>
+</html>

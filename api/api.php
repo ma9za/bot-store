@@ -21,6 +21,15 @@ require_once __DIR__ . '/ads.php';
 $db = Database::getInstance();
 $adsAPI = new AdsAPI();
 
+// Handle JSON input
+$json_input = file_get_contents('php://input');
+$json_data = json_decode($json_input, true);
+
+// Merge JSON data with POST for easier handling
+if ($json_data && is_array($json_data)) {
+    $_POST = array_merge($_POST, $json_data);
+}
+
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
 // Verify Telegram Web App data (للأمان)
@@ -225,7 +234,10 @@ try {
                 'points_per_link_ad' => $db->getSetting('points_per_link_ad'),
                 'points_per_referral' => $db->getSetting('points_per_referral'),
                 'welcome_message' => $db->getSetting('welcome_message'),
-                'store_active' => $db->getSetting('store_active')
+                'store_active' => $db->getSetting('store_active'),
+                'cpagrip_api_key' => $db->getSetting('cpagrip_api_key'),
+                'cpagrip_user_id' => $db->getSetting('cpagrip_user_id'),
+                'shortest_api_key' => $db->getSetting('shortest_api_key')
             ];
 
             echo json_encode(['success' => true, 'settings' => $settings]);
@@ -313,6 +325,7 @@ try {
 
             $type = $_POST['type'] ?? 'link';
             $title = $_POST['title'] ?? '';
+            $description = $_POST['description'] ?? '';
             $url = $_POST['url'] ?? '';
             $points_reward = $_POST['points_reward'] ?? 0;
 
@@ -322,14 +335,62 @@ try {
             }
 
             $conn = $db->getConnection();
-            $stmt = $conn->prepare("INSERT INTO ads (type, title, url, points_reward) VALUES (?, ?, ?, ?)");
-            $success = $stmt->execute([$type, $title, $url, $points_reward]);
+            $stmt = $conn->prepare("INSERT INTO ads (type, title, description, url, points_reward) VALUES (?, ?, ?, ?, ?)");
+            $success = $stmt->execute([$type, $title, $description, $url, $points_reward]);
 
             if ($success) {
                 echo json_encode(['success' => true, 'ad_id' => $conn->lastInsertId()]);
             } else {
                 echo json_encode(['success' => false, 'error' => 'Failed to add ad']);
             }
+            break;
+
+        case 'update_settings':
+            $admin_id = $_POST['admin_id'] ?? 0;
+
+            if (!isAdmin($admin_id)) {
+                echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+                break;
+            }
+
+            $conn = $db->getConnection();
+            $updated = 0;
+
+            // Update points settings
+            if (isset($_POST['points_per_video_ad'])) {
+                $db->updateSetting('points_per_video_ad', $_POST['points_per_video_ad']);
+                $updated++;
+            }
+            if (isset($_POST['points_per_link_ad'])) {
+                $db->updateSetting('points_per_link_ad', $_POST['points_per_link_ad']);
+                $updated++;
+            }
+            if (isset($_POST['points_per_referral'])) {
+                $db->updateSetting('points_per_referral', $_POST['points_per_referral']);
+                $updated++;
+            }
+
+            // Update API settings
+            if (isset($_POST['cpagrip_api_key'])) {
+                $db->updateSetting('cpagrip_api_key', $_POST['cpagrip_api_key']);
+                $updated++;
+            }
+            if (isset($_POST['cpagrip_user_id'])) {
+                $db->updateSetting('cpagrip_user_id', $_POST['cpagrip_user_id']);
+                $updated++;
+            }
+            if (isset($_POST['shortest_api_key'])) {
+                $db->updateSetting('shortest_api_key', $_POST['shortest_api_key']);
+                $updated++;
+            }
+
+            // Update welcome message
+            if (isset($_POST['welcome_message'])) {
+                $db->updateSetting('welcome_message', $_POST['welcome_message']);
+                $updated++;
+            }
+
+            echo json_encode(['success' => true, 'updated' => $updated]);
             break;
 
         default:
