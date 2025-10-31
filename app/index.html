@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#3390ec">
+    <title>المتجر الرقمي</title>
+
+    <!-- Telegram Web App SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading" class="loading-screen">
+        <div class="loader">
+            <div class="loader-spinner"></div>
+            <p>جاري التحميل...</p>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div id="app" class="app-container" style="display: none;">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="user-info">
+                    <div class="user-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="user-details">
+                        <h3 id="userName">مرحباً</h3>
+                        <div class="points-badge">
+                            <i class="fas fa-gem"></i>
+                            <span id="userPoints">0</span>
+                            <span class="points-label">نقطة</span>
+                        </div>
+                    </div>
+                </div>
+                <button class="refresh-btn" id="refreshBtn">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="nav-tabs">
+            <button class="tab-btn active" data-tab="store">
+                <i class="fas fa-store"></i>
+                <span>المتجر</span>
+            </button>
+            <button class="tab-btn" data-tab="earn">
+                <i class="fas fa-coins"></i>
+                <span>اكسب نقاط</span>
+            </button>
+            <button class="tab-btn" data-tab="profile">
+                <i class="fas fa-user-circle"></i>
+                <span>حسابي</span>
+            </button>
+        </nav>
+
+        <!-- Content Container -->
+        <main class="content-container">
+            <!-- Store Tab -->
+            <div class="tab-content active" id="storeTab">
+                <div class="section-header">
+                    <h2><i class="fas fa-shopping-bag"></i> المنتجات المتاحة</h2>
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" data-filter="all">الكل</button>
+                        <button class="filter-btn" data-filter="offers">العروض</button>
+                    </div>
+                </div>
+
+                <div id="productsContainer" class="products-grid">
+                    <!-- Products will be loaded here -->
+                </div>
+
+                <div id="noProducts" class="empty-state" style="display: none;">
+                    <i class="fas fa-box-open"></i>
+                    <p>لا توجد منتجات متاحة حالياً</p>
+                </div>
+            </div>
+
+            <!-- Earn Tab -->
+            <div class="tab-content" id="earnTab">
+                <div class="section-header">
+                    <h2><i class="fas fa-money-bill-wave"></i> اكسب النقاط</h2>
+                </div>
+
+                <!-- Earning Methods -->
+                <div class="earning-methods">
+                    <!-- Watch Ads Card -->
+                    <div class="earn-card">
+                        <div class="earn-card-icon video">
+                            <i class="fas fa-video"></i>
+                        </div>
+                        <div class="earn-card-content">
+                            <h3>مشاهدة الإعلانات</h3>
+                            <p>شاهد إعلانات قصيرة واحصل على نقاط</p>
+                            <div class="earn-reward">
+                                <i class="fas fa-gem"></i>
+                                <span id="videoAdPoints">10</span> نقطة لكل إعلان
+                            </div>
+                        </div>
+                        <button class="earn-btn" onclick="showAds('video')">
+                            <span>ابدأ الآن</span>
+                            <i class="fas fa-arrow-left"></i>
+                        </button>
+                    </div>
+
+                    <!-- Visit Links Card -->
+                    <div class="earn-card">
+                        <div class="earn-card-icon link">
+                            <i class="fas fa-link"></i>
+                        </div>
+                        <div class="earn-card-content">
+                            <h3>زيارة الروابط</h3>
+                            <p>قم بزيارة روابط مختصرة واحصل على نقاط</p>
+                            <div class="earn-reward">
+                                <i class="fas fa-gem"></i>
+                                <span id="linkAdPoints">5</span> نقاط لكل رابط
+                            </div>
+                        </div>
+                        <button class="earn-btn" onclick="showAds('link')">
+                            <span>ابدأ الآن</span>
+                            <i class="fas fa-arrow-left"></i>
+                        </button>
+                    </div>
+
+                    <!-- Referrals Card -->
+                    <div class="earn-card highlight">
+                        <div class="earn-card-icon referral">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="earn-card-content">
+                            <h3>ادعُ أصدقاءك</h3>
+                            <p>احصل على نقاط عندما ينضم أصدقاؤك</p>
+                            <div class="earn-reward">
+                                <i class="fas fa-gem"></i>
+                                <span id="referralPoints">20</span> نقطة لكل صديق
+                            </div>
+                            <div class="referral-stats">
+                                <span><strong id="totalReferrals">0</strong> دعوة</span>
+                                <span><strong id="referralEarnings">0</strong> نقطة مكتسبة</span>
+                            </div>
+                        </div>
+                        <button class="earn-btn primary" onclick="showReferral()">
+                            <span>شارك رابطك</span>
+                            <i class="fas fa-share-alt"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Available Ads -->
+                <div id="adsSection" style="display: none;">
+                    <div class="section-header">
+                        <h2><i class="fas fa-ad"></i> الإعلانات المتاحة</h2>
+                        <button class="back-btn" onclick="hideAds()">
+                            <i class="fas fa-arrow-right"></i> رجوع
+                        </button>
+                    </div>
+                    <div id="adsContainer" class="ads-list">
+                        <!-- Ads will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Tab -->
+            <div class="tab-content" id="profileTab">
+                <div class="profile-header">
+                    <div class="profile-avatar-large">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <h2 id="profileName">اسم المستخدم</h2>
+                    <div class="profile-points-large">
+                        <i class="fas fa-gem"></i>
+                        <span id="profilePoints">0</span>
+                        <span class="points-label">نقطة</span>
+                    </div>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon earned">
+                            <i class="fas fa-arrow-up"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h4 id="totalEarned">0</h4>
+                            <p>إجمالي النقاط المكتسبة</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon spent">
+                            <i class="fas fa-arrow-down"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h4 id="totalSpent">0</h4>
+                            <p>إجمالي النقاط المنفقة</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon orders">
+                            <i class="fas fa-shopping-cart"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h4 id="totalOrders">0</h4>
+                            <p>إجمالي المشتريات</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon referrals">
+                            <i class="fas fa-user-friends"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h4 id="profileReferrals">0</h4>
+                            <p>إجمالي الدعوات</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Orders -->
+                <div class="section-header">
+                    <h3><i class="fas fa-history"></i> آخر المشتريات</h3>
+                </div>
+                <div id="ordersContainer" class="orders-list">
+                    <!-- Orders will be loaded here -->
+                </div>
+
+                <div id="noOrders" class="empty-state" style="display: none;">
+                    <i class="fas fa-shopping-basket"></i>
+                    <p>لا توجد مشتريات حتى الآن</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Product Modal -->
+    <div id="productModal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeProductModal()">
+                <i class="fas fa-times"></i>
+            </button>
+            <div id="productModalContent">
+                <!-- Product details will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Ad Modal -->
+    <div id="adModal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeAdModal()">
+                <i class="fas fa-times"></i>
+            </button>
+            <div id="adModalContent">
+                <!-- Ad details will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Success/Error Toast -->
+    <div id="toast" class="toast">
+        <div class="toast-content">
+            <i class="fas fa-check-circle"></i>
+            <span id="toastMessage"></span>
+        </div>
+    </div>
+
+    <!-- Custom JS -->
+    <script src="assets/js/app.js"></script>
+</body>
+</html>
