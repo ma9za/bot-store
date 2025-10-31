@@ -1,0 +1,40 @@
+# Database
+database/*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+error.log
+updates.log
+
+# Uploads
+uploads/*
+!uploads/.gitkeep
+uploads/products/*
+!uploads/products/.gitkeep
+
+# Config (if sensitive)
+# config.php
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+tmp/
+temp/
+cache/
+
+# Node modules (if using npm)
+node_modules/
+
+# Composer (if using)
+vendor/

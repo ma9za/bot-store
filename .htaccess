@@ -1,0 +1,50 @@
+# Telegram Store Bot - Security Configuration
+
+# Protect database files
+<Files "*.db">
+    Order allow,deny
+    Deny from all
+</Files>
+
+# Protect SQLite files
+<FilesMatch "\.(db|sqlite|sqlite3)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Protect log files
+<Files "*.log">
+    Order allow,deny
+    Deny from all
+</Files>
+
+# Protect config files
+<Files "config.php">
+    Order allow,deny
+    Deny from all
+</Files>
+
+# Prevent directory listing
+Options -Indexes
+
+# Enable error reporting (disable in production)
+# php_flag display_errors on
+# php_value error_reporting E_ALL
+
+# Set max upload size
+php_value upload_max_filesize 10M
+php_value post_max_size 10M
+
+# Enable rewrite engine
+RewriteEngine On
+
+# Force HTTPS (uncomment if needed)
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Security headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>
