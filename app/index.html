@@ -2,277 +2,717 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#3390ec">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>المتجر الرقمي</title>
 
     <!-- Telegram Web App SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-    <!-- Font Awesome for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        /* استخدام Telegram CSS Variables فقط */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="assets/css/style.css">
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+            padding: 0;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* Loading */
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: var(--tg-theme-bg-color, #ffffff);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        #loading.hidden {
+            display: none;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--tg-theme-hint-color, #999);
+            border-top-color: var(--tg-theme-button-color, #3390ec);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Header */
+        .header {
+            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--tg-theme-hint-color, #999);
+        }
+
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .points {
+            background: var(--tg-theme-button-color, #3390ec);
+            color: var(--tg-theme-button-text-color, #fff);
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+
+        /* Navigation */
+        .nav {
+            display: flex;
+            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            border-bottom: 1px solid var(--tg-theme-hint-color, #999);
+        }
+
+        .nav-item {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            background: none;
+            border: none;
+            color: var(--tg-theme-hint-color, #999);
+            font-size: 14px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+
+        .nav-item.active {
+            color: var(--tg-theme-link-color, #3390ec);
+            border-bottom-color: var(--tg-theme-link-color, #3390ec);
+        }
+
+        /* Content */
+        .content {
+            padding: 16px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Product Card */
+        .product {
+            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .product h3 {
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+
+        .product p {
+            color: var(--tg-theme-hint-color, #999);
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+
+        .product-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .price {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--tg-theme-link-color, #3390ec);
+        }
+
+        .btn {
+            background: var(--tg-theme-button-color, #3390ec);
+            color: var(--tg-theme-button-text-color, #fff);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn:active {
+            opacity: 0.8;
+        }
+
+        /* Admin Button */
+        .admin-btn {
+            width: 100%;
+            padding: 16px;
+            margin-bottom: 16px;
+            background: var(--tg-theme-button-color, #3390ec);
+            color: var(--tg-theme-button-text-color, #fff);
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        /* Form */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: var(--tg-theme-hint-color, #999);
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            border: 1px solid var(--tg-theme-hint-color, #999);
+            border-radius: 8px;
+            color: var(--tg-theme-text-color, #000);
+            font-size: 14px;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        /* Stats */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat {
+            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--tg-theme-link-color, #3390ec);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--tg-theme-hint-color, #999);
+            margin-top: 4px;
+        }
+
+        /* Empty State */
+        .empty {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--tg-theme-hint-color, #999);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
 </head>
 <body>
-    <!-- Loading Screen -->
-    <div id="loading" class="loading-screen">
-        <div class="loader">
-            <div class="loader-spinner"></div>
-            <p>جاري التحميل...</p>
-        </div>
+    <!-- Loading -->
+    <div id="loading">
+        <div class="spinner"></div>
     </div>
 
-    <!-- Main Container -->
-    <div id="app" class="app-container" style="display: none;">
+    <!-- App -->
+    <div id="app" class="hidden">
         <!-- Header -->
-        <header class="app-header">
-            <div class="header-content">
-                <div class="user-info">
-                    <div class="user-avatar">
-                        <i class="fas fa-user"></i>
-                    </div>
-                    <div class="user-details">
-                        <h3 id="userName">مرحباً</h3>
-                        <div class="points-badge">
-                            <i class="fas fa-gem"></i>
-                            <span id="userPoints">0</span>
-                            <span class="points-label">نقطة</span>
-                        </div>
-                    </div>
-                </div>
-                <button class="refresh-btn" id="refreshBtn">
-                    <i class="fas fa-sync-alt"></i>
-                </button>
-            </div>
-        </header>
+        <div class="header">
+            <h1 id="userName">مرحباً</h1>
+            <div class="points" id="userPoints">0 نقطة</div>
+        </div>
 
-        <!-- Navigation Tabs -->
-        <nav class="nav-tabs">
-            <button class="tab-btn active" data-tab="store">
-                <i class="fas fa-store"></i>
-                <span>المتجر</span>
-            </button>
-            <button class="tab-btn" data-tab="earn">
-                <i class="fas fa-coins"></i>
-                <span>اكسب نقاط</span>
-            </button>
-            <button class="tab-btn" data-tab="profile">
-                <i class="fas fa-user-circle"></i>
-                <span>حسابي</span>
-            </button>
-        </nav>
+        <!-- Navigation -->
+        <div class="nav">
+            <button class="nav-item active" data-tab="store">المتجر</button>
+            <button class="nav-item" data-tab="earn">اكسب</button>
+            <button class="nav-item" data-tab="profile">حسابي</button>
+        </div>
 
-        <!-- Content Container -->
-        <main class="content-container">
+        <!-- Content -->
+        <div class="content">
             <!-- Store Tab -->
-            <div class="tab-content active" id="storeTab">
-                <div class="section-header">
-                    <h2><i class="fas fa-shopping-bag"></i> المنتجات المتاحة</h2>
-                    <div class="filter-buttons">
-                        <button class="filter-btn active" data-filter="all">الكل</button>
-                        <button class="filter-btn" data-filter="offers">العروض</button>
-                    </div>
-                </div>
+            <div id="store" class="tab-content active">
+                <!-- Admin Button (only for admin) -->
+                <button id="adminBtn" class="admin-btn hidden">⚙️ لوحة الإدارة</button>
 
-                <div id="productsContainer" class="products-grid">
-                    <!-- Products will be loaded here -->
-                </div>
-
-                <div id="noProducts" class="empty-state" style="display: none;">
-                    <i class="fas fa-box-open"></i>
-                    <p>لا توجد منتجات متاحة حالياً</p>
-                </div>
+                <div id="products"></div>
+                <div id="noProducts" class="empty hidden">لا توجد منتجات حالياً</div>
             </div>
 
             <!-- Earn Tab -->
-            <div class="tab-content" id="earnTab">
-                <div class="section-header">
-                    <h2><i class="fas fa-money-bill-wave"></i> اكسب النقاط</h2>
+            <div id="earn" class="tab-content">
+                <h2 style="margin-bottom: 16px;">طرق كسب النقاط</h2>
+
+                <div class="product">
+                    <h3>🎥 مشاهدة إعلانات</h3>
+                    <p>شاهد إعلانات قصيرة واحصل على نقاط</p>
+                    <button class="btn" onclick="showAds()">عرض الإعلانات</button>
                 </div>
 
-                <!-- Earning Methods -->
-                <div class="earning-methods">
-                    <!-- Watch Ads Card -->
-                    <div class="earn-card">
-                        <div class="earn-card-icon video">
-                            <i class="fas fa-video"></i>
-                        </div>
-                        <div class="earn-card-content">
-                            <h3>مشاهدة الإعلانات</h3>
-                            <p>شاهد إعلانات قصيرة واحصل على نقاط</p>
-                            <div class="earn-reward">
-                                <i class="fas fa-gem"></i>
-                                <span id="videoAdPoints">10</span> نقطة لكل إعلان
-                            </div>
-                        </div>
-                        <button class="earn-btn" onclick="showAds('video')">
-                            <span>ابدأ الآن</span>
-                            <i class="fas fa-arrow-left"></i>
-                        </button>
-                    </div>
-
-                    <!-- Visit Links Card -->
-                    <div class="earn-card">
-                        <div class="earn-card-icon link">
-                            <i class="fas fa-link"></i>
-                        </div>
-                        <div class="earn-card-content">
-                            <h3>زيارة الروابط</h3>
-                            <p>قم بزيارة روابط مختصرة واحصل على نقاط</p>
-                            <div class="earn-reward">
-                                <i class="fas fa-gem"></i>
-                                <span id="linkAdPoints">5</span> نقاط لكل رابط
-                            </div>
-                        </div>
-                        <button class="earn-btn" onclick="showAds('link')">
-                            <span>ابدأ الآن</span>
-                            <i class="fas fa-arrow-left"></i>
-                        </button>
-                    </div>
-
-                    <!-- Referrals Card -->
-                    <div class="earn-card highlight">
-                        <div class="earn-card-icon referral">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <div class="earn-card-content">
-                            <h3>ادعُ أصدقاءك</h3>
-                            <p>احصل على نقاط عندما ينضم أصدقاؤك</p>
-                            <div class="earn-reward">
-                                <i class="fas fa-gem"></i>
-                                <span id="referralPoints">20</span> نقطة لكل صديق
-                            </div>
-                            <div class="referral-stats">
-                                <span><strong id="totalReferrals">0</strong> دعوة</span>
-                                <span><strong id="referralEarnings">0</strong> نقطة مكتسبة</span>
-                            </div>
-                        </div>
-                        <button class="earn-btn primary" onclick="showReferral()">
-                            <span>شارك رابطك</span>
-                            <i class="fas fa-share-alt"></i>
-                        </button>
-                    </div>
+                <div class="product">
+                    <h3>👥 دعوة أصدقاء</h3>
+                    <p>احصل على نقاط عند انضمام أصدقائك</p>
+                    <button class="btn" onclick="showReferral()">مشاركة رابطي</button>
                 </div>
 
-                <!-- Available Ads -->
-                <div id="adsSection" style="display: none;">
-                    <div class="section-header">
-                        <h2><i class="fas fa-ad"></i> الإعلانات المتاحة</h2>
-                        <button class="back-btn" onclick="hideAds()">
-                            <i class="fas fa-arrow-right"></i> رجوع
-                        </button>
-                    </div>
-                    <div id="adsContainer" class="ads-list">
-                        <!-- Ads will be loaded here -->
-                    </div>
-                </div>
+                <div id="adsList" class="hidden"></div>
             </div>
 
             <!-- Profile Tab -->
-            <div class="tab-content" id="profileTab">
-                <div class="profile-header">
-                    <div class="profile-avatar-large">
-                        <i class="fas fa-user"></i>
+            <div id="profile" class="tab-content">
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-value" id="totalEarned">0</div>
+                        <div class="stat-label">إجمالي المكتسب</div>
                     </div>
-                    <h2 id="profileName">اسم المستخدم</h2>
-                    <div class="profile-points-large">
-                        <i class="fas fa-gem"></i>
-                        <span id="profilePoints">0</span>
-                        <span class="points-label">نقطة</span>
+                    <div class="stat">
+                        <div class="stat-value" id="totalSpent">0</div>
+                        <div class="stat-label">إجمالي المنفق</div>
                     </div>
-                </div>
-
-                <!-- Stats Cards -->
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-icon earned">
-                            <i class="fas fa-arrow-up"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h4 id="totalEarned">0</h4>
-                            <p>إجمالي النقاط المكتسبة</p>
-                        </div>
+                    <div class="stat">
+                        <div class="stat-value" id="totalOrders">0</div>
+                        <div class="stat-label">عدد المشتريات</div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-icon spent">
-                            <i class="fas fa-arrow-down"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h4 id="totalSpent">0</h4>
-                            <p>إجمالي النقاط المنفقة</p>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon orders">
-                            <i class="fas fa-shopping-cart"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h4 id="totalOrders">0</h4>
-                            <p>إجمالي المشتريات</p>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon referrals">
-                            <i class="fas fa-user-friends"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h4 id="profileReferrals">0</h4>
-                            <p>إجمالي الدعوات</p>
-                        </div>
+                    <div class="stat">
+                        <div class="stat-value" id="totalReferrals">0</div>
+                        <div class="stat-label">عدد الدعوات</div>
                     </div>
                 </div>
 
-                <!-- Recent Orders -->
-                <div class="section-header">
-                    <h3><i class="fas fa-history"></i> آخر المشتريات</h3>
-                </div>
-                <div id="ordersContainer" class="orders-list">
-                    <!-- Orders will be loaded here -->
-                </div>
-
-                <div id="noOrders" class="empty-state" style="display: none;">
-                    <i class="fas fa-shopping-basket"></i>
-                    <p>لا توجد مشتريات حتى الآن</p>
-                </div>
+                <h3 style="margin: 20px 0 12px;">آخر المشتريات</h3>
+                <div id="orders"></div>
+                <div id="noOrders" class="empty hidden">لا توجد مشتريات</div>
             </div>
-        </main>
-    </div>
 
-    <!-- Product Modal -->
-    <div id="productModal" class="modal">
-        <div class="modal-content">
-            <button class="modal-close" onclick="closeProductModal()">
-                <i class="fas fa-times"></i>
-            </button>
-            <div id="productModalContent">
-                <!-- Product details will be loaded here -->
+            <!-- Admin Tab (only for admin) -->
+            <div id="admin" class="tab-content">
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-value" id="adminUsers">0</div>
+                        <div class="stat-label">المستخدمين</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="adminOrders">0</div>
+                        <div class="stat-label">الطلبات</div>
+                    </div>
+                </div>
+
+                <h3 style="margin: 20px 0 12px;">إضافة منتج</h3>
+                <div class="form-group">
+                    <label>اسم المنتج</label>
+                    <input type="text" id="productName" placeholder="اسم المنتج">
+                </div>
+                <div class="form-group">
+                    <label>الوصف</label>
+                    <textarea id="productDesc" placeholder="وصف المنتج"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>السعر (نقطة)</label>
+                    <input type="number" id="productPrice" placeholder="100">
+                </div>
+                <button class="btn" style="width: 100%; padding: 14px;" onclick="addProduct()">إضافة المنتج</button>
+
+                <h3 style="margin: 30px 0 12px;">إضافة محتوى لمنتج</h3>
+                <div class="form-group">
+                    <label>اختر المنتج</label>
+                    <select id="productSelect"></select>
+                </div>
+                <div class="form-group">
+                    <label>المحتوى (كل سطر محتوى منفصل)</label>
+                    <textarea id="productContent" placeholder="CODE-123&#10;CODE-456"></textarea>
+                </div>
+                <button class="btn" style="width: 100%; padding: 14px;" onclick="addContent()">إضافة المحتوى</button>
             </div>
         </div>
     </div>
 
-    <!-- Ad Modal -->
-    <div id="adModal" class="modal">
-        <div class="modal-content">
-            <button class="modal-close" onclick="closeAdModal()">
-                <i class="fas fa-times"></i>
-            </button>
-            <div id="adModalContent">
-                <!-- Ad details will be loaded here -->
-            </div>
-        </div>
-    </div>
+    <script>
+        // Initialize Telegram Web App
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
 
-    <!-- Success/Error Toast -->
-    <div id="toast" class="toast">
-        <div class="toast-content">
-            <i class="fas fa-check-circle"></i>
-            <span id="toastMessage"></span>
-        </div>
-    </div>
+        // Constants
+        const ADMIN_ID = 7732118455;
+        const API_URL = '../api/api.php';
 
-    <!-- Custom JS -->
-    <script src="assets/js/app.js"></script>
+        // State
+        let currentUser = null;
+        let products = [];
+        let isAdmin = false;
+
+        // Initialize
+        async function init() {
+            try {
+                console.log('Initializing...');
+
+                // Get user from Telegram
+                const user = tg.initDataUnsafe?.user;
+
+                if (!user) {
+                    console.error('No user found');
+                    alert('يرجى فتح التطبيق من داخل تليجرام');
+                    return;
+                }
+
+                console.log('User:', user);
+
+                // Check if admin
+                isAdmin = user.id === ADMIN_ID;
+                console.log('Is Admin:', isAdmin);
+
+                // Load user data
+                await loadUser(user.id);
+
+                // Load products
+                await loadProducts();
+
+                // Show admin button if admin
+                if (isAdmin) {
+                    document.getElementById('adminBtn').classList.remove('hidden');
+                }
+
+                // Hide loading, show app
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('app').classList.remove('hidden');
+
+                // Setup navigation
+                setupNav();
+
+            } catch (error) {
+                console.error('Init error:', error);
+                alert('حدث خطأ: ' + error.message);
+            }
+        }
+
+        // Load user
+        async function loadUser(userId) {
+            try {
+                const response = await fetch(`${API_URL}?action=get_user&user_id=${userId}`);
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.error || 'فشل تحميل البيانات');
+                }
+
+                currentUser = data.user;
+
+                // Update UI
+                document.getElementById('userName').textContent = currentUser.first_name || 'مرحباً';
+                document.getElementById('userPoints').textContent = currentUser.points + ' نقطة';
+                document.getElementById('totalEarned').textContent = currentUser.total_earned;
+                document.getElementById('totalSpent').textContent = currentUser.total_spent;
+
+                // Load orders count
+                const ordersResponse = await fetch(`${API_URL}?action=get_orders&user_id=${userId}`);
+                const ordersData = await ordersResponse.json();
+                if (ordersData.success) {
+                    document.getElementById('totalOrders').textContent = ordersData.orders.length;
+                    renderOrders(ordersData.orders);
+                }
+
+                // Referrals
+                document.getElementById('totalReferrals').textContent = currentUser.referral_stats?.total || 0;
+
+            } catch (error) {
+                console.error('Load user error:', error);
+                throw error;
+            }
+        }
+
+        // Load products
+        async function loadProducts() {
+            try {
+                const response = await fetch(`${API_URL}?action=get_products`);
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.error || 'فشل تحميل المنتجات');
+                }
+
+                products = data.products;
+                renderProducts(products);
+
+                // Update product select for admin
+                if (isAdmin) {
+                    updateProductSelect();
+                }
+
+            } catch (error) {
+                console.error('Load products error:', error);
+            }
+        }
+
+        // Render products
+        function renderProducts(items) {
+            const container = document.getElementById('products');
+            const empty = document.getElementById('noProducts');
+
+            if (!items || items.length === 0) {
+                container.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            empty.classList.add('hidden');
+            container.innerHTML = items.map(p => `
+                <div class="product">
+                    <h3>${p.name}</h3>
+                    <p>${p.description || 'منتج رقمي عالي الجودة'}</p>
+                    <div class="product-footer">
+                        <div class="price">${p.final_price || p.price} نقطة</div>
+                        <button class="btn" onclick="buyProduct(${p.id})">شراء</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Buy product
+        async function buyProduct(productId) {
+            if (!currentUser) return;
+
+            const product = products.find(p => p.id === productId);
+            if (!product) return;
+
+            const price = product.final_price || product.price;
+
+            if (currentUser.points < price) {
+                tg.showAlert('رصيدك غير كافٍ');
+                return;
+            }
+
+            tg.showConfirm(`هل تريد شراء ${product.name} بـ ${price} نقطة؟`, async (confirmed) => {
+                if (confirmed) {
+                    try {
+                        const response = await fetch(API_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                action: 'purchase',
+                                user_id: currentUser.user_id,
+                                product_id: productId
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (data.success) {
+                            tg.showAlert(`✅ تم الشراء!\n\n📦 المحتوى:\n${data.content}`);
+                            await loadUser(currentUser.user_id);
+                            await loadProducts();
+                        } else {
+                            tg.showAlert('❌ ' + (data.error || 'فشل الشراء'));
+                        }
+                    } catch (error) {
+                        tg.showAlert('حدث خطأ: ' + error.message);
+                    }
+                }
+            });
+        }
+
+        // Render orders
+        function renderOrders(orders) {
+            const container = document.getElementById('orders');
+            const empty = document.getElementById('noOrders');
+
+            if (!orders || orders.length === 0) {
+                container.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            empty.classList.add('hidden');
+            container.innerHTML = orders.slice(0, 10).map(o => `
+                <div class="product">
+                    <h3>${o.product_name}</h3>
+                    <div class="product-footer">
+                        <div class="price">${o.points_spent} نقطة</div>
+                        <div style="color: var(--tg-theme-hint-color);">${new Date(o.created_at).toLocaleDateString('ar')}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Show referral
+        function showReferral() {
+            const link = `https://t.me/STBEBOT?start=${currentUser.referral_code}`;
+            tg.showPopup({
+                title: 'رابط الدعوة',
+                message: `شارك هذا الرابط مع أصدقائك:\n\n${link}`,
+                buttons: [
+                    { id: 'share', type: 'default', text: 'مشاركة' },
+                    { type: 'close' }
+                ]
+            }, (buttonId) => {
+                if (buttonId === 'share') {
+                    const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent('انضم معي!')}`;
+                    tg.openTelegramLink(shareUrl);
+                }
+            });
+        }
+
+        // Show ads
+        function showAds() {
+            tg.showAlert('ميزة الإعلانات قيد التطوير');
+        }
+
+        // Admin functions
+        function updateProductSelect() {
+            const select = document.getElementById('productSelect');
+            select.innerHTML = '<option value="">-- اختر --</option>' +
+                products.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+        }
+
+        async function addProduct() {
+            const name = document.getElementById('productName').value;
+            const desc = document.getElementById('productDesc').value;
+            const price = document.getElementById('productPrice').value;
+
+            if (!name || !price) {
+                tg.showAlert('يرجى ملء جميع الحقول');
+                return;
+            }
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'admin_add_product',
+                        admin_id: ADMIN_ID,
+                        name, description: desc, price
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    tg.showAlert('✅ تمت الإضافة!');
+                    document.getElementById('productName').value = '';
+                    document.getElementById('productDesc').value = '';
+                    document.getElementById('productPrice').value = '';
+                    await loadProducts();
+                } else {
+                    tg.showAlert('❌ ' + (data.error || 'فشلت الإضافة'));
+                }
+            } catch (error) {
+                tg.showAlert('حدث خطأ: ' + error.message);
+            }
+        }
+
+        async function addContent() {
+            const productId = document.getElementById('productSelect').value;
+            const content = document.getElementById('productContent').value;
+
+            if (!productId || !content) {
+                tg.showAlert('يرجى ملء جميع الحقول');
+                return;
+            }
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'admin_add_product_content',
+                        admin_id: ADMIN_ID,
+                        product_id: productId,
+                        content
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    tg.showAlert(`✅ تمت الإضافة! (${data.added} محتوى)`);
+                    document.getElementById('productContent').value = '';
+                } else {
+                    tg.showAlert('❌ ' + (data.error || 'فشلت الإضافة'));
+                }
+            } catch (error) {
+                tg.showAlert('حدث خطأ: ' + error.message);
+            }
+        }
+
+        // Navigation
+        function setupNav() {
+            const navItems = document.querySelectorAll('.nav-item');
+            const tabs = document.querySelectorAll('.tab-content');
+
+            navItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    const tab = item.dataset.tab;
+
+                    navItems.forEach(n => n.classList.remove('active'));
+                    tabs.forEach(t => t.classList.remove('active'));
+
+                    item.classList.add('active');
+                    document.getElementById(tab).classList.add('active');
+                });
+            });
+
+            // Admin button
+            document.getElementById('adminBtn').addEventListener('click', () => {
+                navItems.forEach(n => n.classList.remove('active'));
+                tabs.forEach(t => t.classList.remove('active'));
+                document.getElementById('admin').classList.add('active');
+
+                // Load admin stats
+                loadAdminStats();
+            });
+        }
+
+        async function loadAdminStats() {
+            try {
+                const response = await fetch(`${API_URL}?action=get_stats`);
+                const data = await response.json();
+                if (data.success) {
+                    document.getElementById('adminUsers').textContent = data.stats.total_users;
+                    document.getElementById('adminOrders').textContent = data.stats.total_orders;
+                }
+            } catch (error) {
+                console.error('Load stats error:', error);
+            }
+        }
+
+        // Start app
+        init();
+    </script>
 </body>
 </html>
