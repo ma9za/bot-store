@@ -78,6 +78,32 @@
             to { transform: translateY(0); }
         }
 
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--tg-theme-button-color, #3390ec), #667eea);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
         .header-left h1 {
             font-size: 20px;
             font-weight: 600;
@@ -303,6 +329,11 @@
             color: white;
         }
 
+        .earn-icon.channel {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: white;
+        }
+
         .earn-icon.referral {
             background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
             color: white;
@@ -512,8 +543,13 @@
         <!-- Header -->
         <div class="header">
             <div class="header-left">
-                <h1 id="userName">مرحباً</h1>
-                <p>متجر المنتجات الرقمية</p>
+                <div class="user-avatar" id="userAvatar">
+                    <i class='bx bxs-user'></i>
+                </div>
+                <div>
+                    <h1 id="userName">مرحباً</h1>
+                    <p>متجر المنتجات الرقمية</p>
+                </div>
             </div>
             <div class="points-badge">
                 <i class='bx bxs-diamond'></i>
@@ -579,6 +615,36 @@
                     <div class="earn-reward">
                         <i class='bx bxs-diamond'></i>
                         <span id="referralPoints">20</span> نقطة
+                    </div>
+                </div>
+                <i class='bx bx-chevron-left' style="font-size: 24px; color: var(--tg-theme-hint-color);"></i>
+            </div>
+
+            <div class="earn-card" onclick="showChannels()">
+                <div class="earn-icon channel">
+                    <i class='bx bxs-video-recording'></i>
+                </div>
+                <div class="earn-content">
+                    <h3>الانضمام للقنوات</h3>
+                    <p>انضم للقنوات واحصل على نقاط فورية</p>
+                    <div class="earn-reward">
+                        <i class='bx bxs-diamond'></i>
+                        <span>10-50</span> نقطة
+                    </div>
+                </div>
+                <i class='bx bx-chevron-left' style="font-size: 24px; color: var(--tg-theme-hint-color);"></i>
+            </div>
+
+            <div class="earn-card" onclick="showLinkAds()">
+                <div class="earn-icon link">
+                    <i class='bx bxs-link-alt'></i>
+                </div>
+                <div class="earn-content">
+                    <h3>زيارة الروابط</h3>
+                    <p>قم بزيارة الروابط واحصل على نقاط</p>
+                    <div class="earn-reward">
+                        <i class='bx bxs-diamond'></i>
+                        <span>5-20</span> نقطة
                     </div>
                 </div>
                 <i class='bx bx-chevron-left' style="font-size: 24px; color: var(--tg-theme-hint-color);"></i>
@@ -683,6 +749,13 @@
             document.getElementById('userPoints').textContent = currentUser.points;
             document.getElementById('totalEarned').textContent = currentUser.total_earned;
             document.getElementById('totalSpent').textContent = currentUser.total_spent;
+
+            // Load user photo from Telegram
+            const user = tg.initDataUnsafe?.user;
+            if (user && user.photo_url) {
+                const avatar = document.getElementById('userAvatar');
+                avatar.innerHTML = `<img src="${user.photo_url}" alt="Avatar">`;
+            }
 
             // Load orders
             const ordersRes = await fetch(`${API_URL}?action=get_orders&user_id=${userId}`);
@@ -829,6 +902,121 @@
 
         function showAds() {
             tg.showAlert('ميزة الإعلانات قيد التطوير');
+        }
+
+        async function showChannels() {
+            try {
+                tg.HapticFeedback?.impactOccurred('medium');
+
+                const response = await fetch(`${API_URL}?action=get_unjoined_channels&user_id=${currentUser.user_id}`);
+                const data = await response.json();
+
+                if (!data.success) {
+                    tg.showAlert('فشل تحميل القنوات');
+                    return;
+                }
+
+                if (data.channels.length === 0) {
+                    tg.showAlert('أنت مشترك في جميع القنوات المتاحة! 🎉');
+                    return;
+                }
+
+                let message = '📺 قنوات متاحة للانضمام:\n\n';
+                data.channels.forEach((ch, i) => {
+                    message += `${i + 1}. ${ch.channel_title}\n`;
+                    message += `   💎 ${ch.points_reward} نقطة\n`;
+                    if (ch.channel_username) {
+                        message += `   @${ch.channel_username}\n`;
+                    }
+                    message += '\n';
+                });
+
+                message += '\n✅ انضم للقنوات ثم أرسل /channels للبوت للتحقق وكسب النقاط!';
+
+                tg.showAlert(message);
+
+            } catch (error) {
+                console.error(error);
+                tg.showAlert('حدث خطأ: ' + error.message);
+            }
+        }
+
+        async function showLinkAds() {
+            try {
+                tg.HapticFeedback?.impactOccurred('medium');
+
+                const response = await fetch(`${API_URL}?action=get_link_ads`);
+                const data = await response.json();
+
+                if (!data.success || data.ads.length === 0) {
+                    tg.showAlert('لا توجد روابط متاحة حالياً');
+                    return;
+                }
+
+                let message = '🔗 الروابط المتاحة:\n\n';
+                data.ads.slice(0, 5).forEach((ad, i) => {
+                    message += `${i + 1}. ${ad.title}\n`;
+                    message += `   💎 ${ad.points_reward} نقطة\n\n`;
+                });
+
+                tg.showPopup({
+                    title: 'روابط الإعلانات',
+                    message: message + '\nانقر "عرض الروابط" للبدء',
+                    buttons: [
+                        { id: 'show', type: 'default', text: 'عرض الروابط' },
+                        { type: 'close' }
+                    ]
+                }, async (buttonId) => {
+                    if (buttonId === 'show') {
+                        await displayLinkAdsList(data.ads);
+                    }
+                });
+
+            } catch (error) {
+                console.error(error);
+                tg.showAlert('حدث خطأ: ' + error.message);
+            }
+        }
+
+        async function displayLinkAdsList(ads) {
+            for (const ad of ads) {
+                const generate = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'generate_link',
+                        user_id: currentUser.user_id,
+                        ad_id: ad.id
+                    })
+                });
+
+                const result = await generate.json();
+
+                if (result.success) {
+                    tg.showPopup({
+                        title: ad.title,
+                        message: `${ad.description || ''}\n\n💎 المكافأة: ${ad.points_reward} نقطة\n\n1️⃣ اضغط "زيارة الرابط"\n2️⃣ أكمل مشاهدة الإعلان\n3️⃣ انسخ هذا الرمز:\n\n${result.token}\n\n4️⃣ أرسله للبوت`,
+                        buttons: [
+                            { id: 'visit', type: 'default', text: 'زيارة الرابط' },
+                            { id: 'copy', type: 'ok', text: 'نسخ الرمز' },
+                            { type: 'close' }
+                        ]
+                    }, (buttonId) => {
+                        if (buttonId === 'visit') {
+                            tg.openLink(result.shortened_url);
+                        } else if (buttonId === 'copy') {
+                            tg.showAlert(`تم! الآن أرسل هذا الرمز للبوت:\n\n${result.token}`);
+                        }
+                    });
+
+                    break; // Show one at a time
+                } else if (result.error === 'already_clicked') {
+                    continue; // Try next ad
+                } else {
+                    tg.showAlert('فشل إنشاء الرابط');
+                    break;
+                }
+            }
         }
 
         function switchPage(page) {

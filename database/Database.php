@@ -50,10 +50,13 @@ class Database {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
             description TEXT,
-            image_path TEXT,
+            image_file_id TEXT,
             price INTEGER NOT NULL,
             stock_quantity INTEGER DEFAULT -1,
             max_per_user INTEGER DEFAULT 1,
+            content_type TEXT DEFAULT 'unique',
+            file_id TEXT,
+            file_type TEXT,
             is_offer INTEGER DEFAULT 0,
             offer_price INTEGER,
             offer_ends_at DATETIME,
@@ -158,6 +161,62 @@ class Database {
             type TEXT DEFAULT 'info',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(user_id)
+        )");
+
+        // Shortened Link Ads Table (روابط الإعلانات المختصرة)
+        $this->db->exec("CREATE TABLE IF NOT EXISTS shortened_link_ads (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            description TEXT,
+            destination_url TEXT NOT NULL,
+            points_reward INTEGER NOT NULL,
+            shortener_service TEXT DEFAULT 'shorte.st',
+            is_active INTEGER DEFAULT 1,
+            view_count INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )");
+
+        // Link Clicks Table (تتبع نقرات الروابط)
+        $this->db->exec("CREATE TABLE IF NOT EXISTS link_clicks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            ad_id INTEGER NOT NULL,
+            token TEXT UNIQUE NOT NULL,
+            shortened_url TEXT,
+            clicked INTEGER DEFAULT 0,
+            verified INTEGER DEFAULT 0,
+            points_earned INTEGER DEFAULT 0,
+            ip_address TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            clicked_at DATETIME,
+            verified_at DATETIME,
+            FOREIGN KEY (user_id) REFERENCES users(user_id),
+            FOREIGN KEY (ad_id) REFERENCES shortened_link_ads(id)
+        )");
+
+        // Channels Table (قنوات الاشتراك الإجباري)
+        $this->db->exec("CREATE TABLE IF NOT EXISTS channels (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            channel_id TEXT UNIQUE NOT NULL,
+            channel_username TEXT,
+            channel_title TEXT NOT NULL,
+            points_reward INTEGER NOT NULL,
+            is_active INTEGER DEFAULT 1,
+            join_count INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )");
+
+        // Channel Joins Table (تتبع انضمام المستخدمين للقنوات)
+        $this->db->exec("CREATE TABLE IF NOT EXISTS channel_joins (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            channel_id INTEGER NOT NULL,
+            points_earned INTEGER DEFAULT 0,
+            verified INTEGER DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(user_id),
+            FOREIGN KEY (channel_id) REFERENCES channels(id),
+            UNIQUE(user_id, channel_id)
         )");
 
         // Initialize default settings
@@ -413,13 +472,18 @@ class Database {
     // Referral Methods
     public function createReferral($referrer_id, $referred_id) {
         $points = $this->getSetting('points_per_referral');
+        $bonus_for_new = $this->getSetting('points_for_new_referral') ?: $points; // نفس النقاط للطرفين
 
         $this->db->beginTransaction();
         try {
             $stmt = $this->db->prepare("INSERT INTO referrals (referrer_id, referred_id, points_earned) VALUES (?, ?, ?)");
             $stmt->execute([$referrer_id, $referred_id, $points]);
 
-            $this->addPoints($referrer_id, $points, 'referral', 'Referral bonus for inviting user', $referred_id);
+            // إعطاء نقاط للمُحيل
+            $this->addPoints($referrer_id, $points, 'referral', 'مكافأة دعوة مستخدم جديد 🎁', $referred_id);
+
+            // إعطاء نقاط للمستخدم الجديد
+            $this->addPoints($referred_id, $bonus_for_new, 'referral_bonus', 'مكافأة الانضمام عبر دعوة 🎉', $referrer_id);
 
             $this->db->commit();
             return true;
@@ -473,5 +537,166 @@ class Database {
         $stats['total_ad_views'] = $stmt->fetch()['count'];
 
         return $stats;
+    }
+
+    // Shortened Link Ads Methods
+    public function getActiveLinkAds() {
+        $stmt = $this->db->query("SELECT * FROM shortened_link_ads WHERE is_active = 1 ORDER BY created_at DESC");
+        return $stmt->fetchAll();
+    }
+
+    public function getLinkAd($ad_id) {
+        $stmt = $this->db->prepare("SELECT * FROM shortened_link_ads WHERE id = ?");
+        $stmt->execute([$ad_id]);
+        return $stmt->fetch();
+    }
+
+    public function generateLinkToken($user_id, $ad_id) {
+        return bin2hex(random_bytes(16)) . '_' . $user_id . '_' . $ad_id . '_' . time();
+    }
+
+    public function createLinkClick($user_id, $ad_id, $shortened_url = null) {
+        $token = $this->generateLinkToken($user_id, $ad_id);
+
+        $stmt = $this->db->prepare("INSERT INTO link_clicks (user_id, ad_id, token, shortened_url) VALUES (?, ?, ?, ?)");
+        $stmt->execute([$user_id, $ad_id, $token, $shortened_url]);
+
+        return $token;
+    }
+
+    public function getLinkClickByToken($token) {
+        $stmt = $this->db->prepare("SELECT * FROM link_clicks WHERE token = ?");
+        $stmt->execute([$token]);
+        return $stmt->fetch();
+    }
+
+    public function verifyLinkClick($token) {
+        $this->db->beginTransaction();
+        try {
+            $click = $this->getLinkClickByToken($token);
+
+            if (!$click || $click['verified']) {
+                return false; // Already verified or not found
+            }
+
+            $ad = $this->getLinkAd($click['ad_id']);
+
+            // Mark as verified
+            $stmt = $this->db->prepare("UPDATE link_clicks SET verified = 1, points_earned = ?, verified_at = CURRENT_TIMESTAMP WHERE token = ?");
+            $stmt->execute([$ad['points_reward'], $token]);
+
+            // Add points to user
+            $this->addPoints($click['user_id'], $ad['points_reward'], 'link_ad', 'مشاهدة إعلان: ' . $ad['title'], $click['ad_id']);
+
+            // Update ad stats
+            $stmt = $this->db->prepare("UPDATE shortened_link_ads SET view_count = view_count + 1 WHERE id = ?");
+            $stmt->execute([$click['ad_id']]);
+
+            $this->db->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            logError("Verify Link Click Error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function hasUserClickedLinkAd($user_id, $ad_id) {
+        $stmt = $this->db->prepare("SELECT COUNT(*) as count FROM link_clicks WHERE user_id = ? AND ad_id = ? AND verified = 1");
+        $stmt->execute([$user_id, $ad_id]);
+        return $stmt->fetch()['count'] > 0;
+    }
+
+    // Channel Methods
+    public function getActiveChannels() {
+        $stmt = $this->db->query("SELECT * FROM channels WHERE is_active = 1 ORDER BY created_at DESC");
+        return $stmt->fetchAll();
+    }
+
+    public function getChannel($channel_id) {
+        $stmt = $this->db->prepare("SELECT * FROM channels WHERE id = ? OR channel_id = ?");
+        $stmt->execute([$channel_id, $channel_id]);
+        return $stmt->fetch();
+    }
+
+    public function addChannel($channel_id, $channel_username, $channel_title, $points_reward) {
+        $stmt = $this->db->prepare("INSERT INTO channels (channel_id, channel_username, channel_title, points_reward)
+                                    VALUES (?, ?, ?, ?)");
+        return $stmt->execute([$channel_id, $channel_username, $channel_title, $points_reward]);
+    }
+
+    public function updateChannel($id, $points_reward, $is_active) {
+        $stmt = $this->db->prepare("UPDATE channels SET points_reward = ?, is_active = ? WHERE id = ?");
+        return $stmt->execute([$points_reward, $is_active, $id]);
+    }
+
+    public function recordChannelJoin($user_id, $channel_db_id, $points_earned) {
+        $this->db->beginTransaction();
+        try {
+            // Check if already joined
+            $stmt = $this->db->prepare("SELECT * FROM channel_joins WHERE user_id = ? AND channel_id = ?");
+            $stmt->execute([$user_id, $channel_db_id]);
+
+            if ($stmt->fetch()) {
+                return false; // Already joined
+            }
+
+            // Record join
+            $stmt = $this->db->prepare("INSERT INTO channel_joins (user_id, channel_id, points_earned) VALUES (?, ?, ?)");
+            $stmt->execute([$user_id, $channel_db_id, $points_earned]);
+
+            // Add points
+            $channel = $this->getChannel($channel_db_id);
+            $this->addPoints($user_id, $points_earned, 'channel_join', 'الانضمام للقناة: ' . $channel['channel_title'], $channel_db_id);
+
+            // Update channel stats
+            $stmt = $this->db->prepare("UPDATE channels SET join_count = join_count + 1 WHERE id = ?");
+            $stmt->execute([$channel_db_id]);
+
+            $this->db->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            logError("Record Channel Join Error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function hasUserJoinedChannel($user_id, $channel_db_id) {
+        $stmt = $this->db->prepare("SELECT COUNT(*) as count FROM channel_joins WHERE user_id = ? AND channel_id = ?");
+        $stmt->execute([$user_id, $channel_db_id]);
+        return $stmt->fetch()['count'] > 0;
+    }
+
+    public function getUnjoinedChannels($user_id) {
+        $stmt = $this->db->prepare("
+            SELECT c.* FROM channels c
+            WHERE c.is_active = 1
+            AND c.id NOT IN (
+                SELECT channel_id FROM channel_joins WHERE user_id = ?
+            )
+            ORDER BY c.created_at DESC
+        ");
+        $stmt->execute([$user_id]);
+        return $stmt->fetchAll();
+    }
+
+    // Product Methods for new content types
+    public function updateProductContentType($product_id, $content_type, $file_id = null, $file_type = null) {
+        $stmt = $this->db->prepare("UPDATE products SET content_type = ?, file_id = ?, file_type = ? WHERE id = ?");
+        return $stmt->execute([$content_type, $file_id, $file_type, $product_id]);
+    }
+
+    public function getProductWithContent($product_id) {
+        $product = $this->getProduct($product_id);
+
+        if ($product && $product['content_type'] === 'unique') {
+            // Get available content count
+            $stmt = $this->db->prepare("SELECT COUNT(*) as count FROM product_content WHERE product_id = ? AND is_used = 0");
+            $stmt->execute([$product_id]);
+            $product['available_content'] = $stmt->fetch()['count'];
+        }
+
+        return $product;
     }
 }
