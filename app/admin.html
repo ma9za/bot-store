@@ -482,6 +482,61 @@
             </div>
         </div>
 
+        <!-- Channels Page -->
+        <div id="channelsPage" class="page">
+            <div id="successMsgChannels" class="success-msg">
+                <i class='bx bxs-check-circle'></i>
+                <span>تمت العملية بنجاح!</span>
+            </div>
+
+            <div class="section">
+                <div class="section-title">
+                    <i class='bx bxs-plus-circle'></i>
+                    إضافة قناة جديدة
+                </div>
+
+                <div class="form-group">
+                    <label>معرّف القناة (Channel ID) *</label>
+                    <input type="text" id="channelId" placeholder="-1001234567890">
+                    <p style="font-size: 12px; color: var(--tg-theme-hint-color); margin-top: 4px;">
+                        💡 استخدم /getchannels في البوت للحصول على معرفات القنوات
+                    </p>
+                </div>
+
+                <div class="form-group">
+                    <label>اسم القناة *</label>
+                    <input type="text" id="channelTitle" placeholder="مثال: قناة المتجر الرسمية">
+                </div>
+
+                <div class="form-group">
+                    <label>معرف القناة (@username)</label>
+                    <input type="text" id="channelUsername" placeholder="channel_username">
+                </div>
+
+                <div class="form-group">
+                    <label>نقاط الانضمام *</label>
+                    <input type="number" id="channelPoints" placeholder="20" min="1">
+                </div>
+
+                <button class="btn" onclick="addChannel()">
+                    <i class='bx bx-plus'></i>
+                    إضافة القناة
+                </button>
+            </div>
+
+            <div class="section">
+                <div class="section-title">
+                    <i class='bx bxs-video-recording'></i>
+                    القنوات الحالية
+                </div>
+                <div id="channelsList" class="products-list"></div>
+                <div id="noChannelsList" class="empty-state hidden">
+                    <i class='bx bx-video-recording'></i>
+                    <p>لا توجد قنوات</p>
+                </div>
+            </div>
+        </div>
+
         <!-- Ads Page -->
         <div id="adsPage" class="page">
             <div id="successMsgAds" class="success-msg">
@@ -526,6 +581,38 @@
                 <button class="btn" onclick="addAd()">
                     <i class='bx bx-plus'></i>
                     إضافة الإعلان
+                </button>
+            </div>
+
+            <div class="section">
+                <div class="section-title">
+                    <i class='bx bxs-link-alt'></i>
+                    إضافة رابط مختصر
+                </div>
+
+                <div class="form-group">
+                    <label>عنوان الرابط *</label>
+                    <input type="text" id="linkAdTitle" placeholder="مثال: زر موقعنا">
+                </div>
+
+                <div class="form-group">
+                    <label>الوصف</label>
+                    <textarea id="linkAdDesc" placeholder="وصف الرابط..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>الرابط الأصلي *</label>
+                    <input type="url" id="linkAdDestination" placeholder="https://example.com">
+                </div>
+
+                <div class="form-group">
+                    <label>النقاط المكتسبة *</label>
+                    <input type="number" id="linkAdPoints" placeholder="5" min="1">
+                </div>
+
+                <button class="btn" onclick="addLinkAd()">
+                    <i class='bx bx-plus'></i>
+                    إضافة الرابط المختصر
                 </button>
             </div>
         </div>
@@ -605,6 +692,10 @@
                 <i class='bx bxs-package'></i>
                 <span>المنتجات</span>
             </button>
+            <button class="nav-item" onclick="switchPage('channels')">
+                <i class='bx bxs-video-recording'></i>
+                <span>القنوات</span>
+            </button>
             <button class="nav-item" onclick="switchPage('ads')">
                 <i class='bx bxs-videos'></i>
                 <span>الإعلانات</span>
@@ -640,6 +731,7 @@
 
                 await loadStats();
                 await loadProducts();
+                await loadChannels();
                 await loadSettings();
 
                 document.getElementById('loading').classList.add('hide');
@@ -824,6 +916,129 @@
             } catch (error) {
                 tg.showAlert('حدث خطأ: ' + error.message);
             }
+        }
+
+        async function addChannel() {
+            const channelId = document.getElementById('channelId').value.trim();
+            const channelTitle = document.getElementById('channelTitle').value.trim();
+            const channelUsername = document.getElementById('channelUsername').value.trim();
+            const points = document.getElementById('channelPoints').value;
+
+            if (!channelId || !channelTitle || !points) {
+                tg.showAlert('يرجى ملء الحقول المطلوبة');
+                return;
+            }
+
+            try {
+                tg.HapticFeedback?.impactOccurred('medium');
+
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'admin_add_channel',
+                        admin_id: ADMIN_ID,
+                        channel_id: channelId,
+                        channel_username: channelUsername,
+                        channel_title: channelTitle,
+                        points_reward: points
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    tg.HapticFeedback?.notificationOccurred('success');
+                    showSuccess('successMsgChannels');
+                    document.getElementById('channelId').value = '';
+                    document.getElementById('channelTitle').value = '';
+                    document.getElementById('channelUsername').value = '';
+                    document.getElementById('channelPoints').value = '';
+                    await loadChannels();
+                } else {
+                    tg.showAlert('❌ ' + (data.error || 'فشلت الإضافة'));
+                }
+            } catch (error) {
+                tg.showAlert('حدث خطأ: ' + error.message);
+            }
+        }
+
+        async function addLinkAd() {
+            const title = document.getElementById('linkAdTitle').value.trim();
+            const desc = document.getElementById('linkAdDesc').value.trim();
+            const destination = document.getElementById('linkAdDestination').value.trim();
+            const points = document.getElementById('linkAdPoints').value;
+
+            if (!title || !destination || !points) {
+                tg.showAlert('يرجى ملء الحقول المطلوبة');
+                return;
+            }
+
+            try {
+                tg.HapticFeedback?.impactOccurred('medium');
+
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'admin_add_link_ad',
+                        admin_id: ADMIN_ID,
+                        title,
+                        description: desc,
+                        destination_url: destination,
+                        points_reward: points
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    tg.HapticFeedback?.notificationOccurred('success');
+                    showSuccess('successMsgAds');
+                    document.getElementById('linkAdTitle').value = '';
+                    document.getElementById('linkAdDesc').value = '';
+                    document.getElementById('linkAdDestination').value = '';
+                    document.getElementById('linkAdPoints').value = '';
+                } else {
+                    tg.showAlert('❌ ' + (data.error || 'فشلت الإضافة'));
+                }
+            } catch (error) {
+                tg.showAlert('حدث خطأ: ' + error.message);
+            }
+        }
+
+        async function loadChannels() {
+            const response = await fetch(`${API_URL}?action=get_channels&user_id=${ADMIN_ID}`);
+            const data = await response.json();
+
+            if (data.success) {
+                renderChannelsList(data.channels);
+            }
+        }
+
+        function renderChannelsList(channels) {
+            const container = document.getElementById('channelsList');
+            const empty = document.getElementById('noChannelsList');
+
+            if (!channels || channels.length === 0) {
+                container.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            empty.classList.add('hidden');
+            container.innerHTML = channels.map(ch => `
+                <div class="product-item">
+                    <div class="product-item-info">
+                        <h4>${ch.channel_title}</h4>
+                        <p>${ch.channel_username ? '@' + ch.channel_username : ch.channel_id}</p>
+                        <p>الأعضاء: ${ch.join_count || 0}</p>
+                    </div>
+                    <div class="product-item-price">
+                        💎 ${ch.points_reward}
+                    </div>
+                </div>
+            `).join('');
         }
 
         async function loadSettings() {
